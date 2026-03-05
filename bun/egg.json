@@ -1,0 +1,153 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - PTERODACTYL.IO",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-03-05T02:25:11-06:00",
+    "name": "Bun Egg",
+    "author": "ky@kyvrixon.dev",
+    "description": "Bun is an incredibly fast JavaScript runtime, transpiler bundler, and npm package manager all-in-one.",
+    "features": [],
+    "docker_images": {
+        "Bun Latest": "ghcr.io\/ptero-eggs\/yolks:bun_latest",
+        "Bun Canary (unstable)": "ghcr.io\/ptero-eggs\/yolks:bun_canary"
+    },
+    "file_denylist": [],
+    "startup": "set -euo pipefail; [[ \"${USING_GIT:-0}\" == \"1\" && -d .git && \"${AUTO_UPDATE:-0}\" == \"1\" ]] && git pull; [[ -n \"${RMBUN_PACKAGES:-}\" ]] && bun remove ${RMBUN_PACKAGES}; [[ -f \/home\/container\/package.json ]] && ${INSTALL_DEPS_CMD}; ${START_CMD}",
+    "config": {
+        "files": "{}",
+        "startup": "{\r\n    \"done\": [\r\n        \"--ptero-done\"\r\n    ]\r\n}",
+        "logs": "{}",
+        "stop": "^^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!\/bin\/bash\r\nset -euo pipefail\r\nexport DEBIAN_FRONTEND=noninteractive\r\n\r\nbanner() {\r\n    echo \"-----------------------------------------\"\r\n    echo \"$1\"\r\n    echo \"-----------------------------------------\"\r\n}\r\n\r\ngenhome() {\r\n    local base=\"\/home\/container\/\"\r\n    if [[ $1 ]]; then\r\n        echo \"$base$1\"\r\n    else\r\n        echo \"$base\"\r\n    fi\r\n}\r\n\r\nsync_git() {\r\n    local base=\"$1\"\r\n    if [[ -d \"$base\/.git\" && -f \"$base\/.git\/config\" ]]; then\r\n        local origin\r\n        origin=$(git -C \"$base\" config --get remote.origin.url)\r\n        if [[ \"$origin\" == \"$GIT_ADDRESS\" ]]; then\r\n            echo \"Origin match found. Pulling latest changes...\"\r\n            git -C \"$base\" pull\r\n        else\r\n            echo \"Origin mismatch. Skipping pull to avoid conflicts.\"\r\n        fi\r\n    else\r\n        echo \"Cloning repository...\"\r\n        if [[ -z \"${BRANCH:-}\" ]]; then\r\n            git clone \"$GIT_ADDRESS\" \"$base\"\r\n        else\r\n            git clone --single-branch --branch \"$BRANCH\" \"$GIT_ADDRESS\" \"$base\"\r\n        fi\r\n    fi\r\n}\r\n\r\ninstall_deps() {\r\n    local base=\"$1\"\r\n    if [[ ${INSTALL_DEPS:-0} == \"1\" && -n \"${INSTALL_DEPS_CMD:-}\" && -f \"$base\/package.json\" ]]; then\r\n        echo \"Executing: ${INSTALL_DEPS_CMD}\"\r\n        (cd \"$base\" && ${INSTALL_DEPS_CMD})\r\n    else\r\n        echo \"Dependency installation skipped.\"\r\n    fi\r\n}\r\n\r\n# =========================\r\n# Main script\r\n# =========================\r\nbase=$(genhome)\r\n\r\nbanner \"Starting Installation Process\"\r\n\r\necho \"Updating package lists...\"\r\napt update -y -qq > \/dev\/null\r\n\r\necho \"Installing system dependencies...\"\r\npackages=(git curl jq file unzip make gcc g++ python3 ${OS_PACKAGES:-})\r\napt install -y -qq \"${packages[@]}\" > \/dev\/null\r\n\r\necho \"Cleaning up apt cache...\"\r\nrm -rf \/var\/lib\/apt\/lists\/* > \/dev\/null\r\n\r\nbanner \"Configuring Workspace\"\r\n\r\necho \"Navigating to $base...\"\r\nmkdir -p \"$base\"\r\ncd \"$base\"\r\n\r\nif [[ ${USER_UPLOAD:-0} == \"1\" ]]; then\r\n    echo \"User upload detected. Skipping Git synchronization.\"\r\n    exit 0\r\nfi\r\n\r\n\r\n[[ \"$GIT_ADDRESS\" != *.git ]] && GIT_ADDRESS=\"${GIT_ADDRESS}.git\"\r\n\r\nif [[ -n \"${USERNAME:-}\" || -n \"${ACCESS_TOKEN:-}\" ]]; then\r\n    echo \"Configuring Git credentials...\"\r\n    GIT_URL_PATH=$(echo \"$GIT_ADDRESS\" | cut -d\/ -f3-)\r\n    GIT_ADDRESS=\"https:\/\/${USERNAME}:${ACCESS_TOKEN}@${GIT_URL_PATH}\"\r\nelse\r\n    echo \"Using anonymous Git access\"\r\nfi\r\n\r\nbanner \"Synchronising Source Code\"\r\nsync_git \"$base\"\r\n\r\nbanner \"Installing Dependencies\"\r\ninstall_deps \"$base\"\r\n\r\nbanner \"Installation Complete!\"",
+            "container": "ghcr.io\/ptero-eggs\/installers:debian",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Git Repository URL",
+            "description": "Git repository url to clone from",
+            "env_variable": "GIT_ADDRESS",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Git Branch",
+            "description": "Git branch to clone from",
+            "env_variable": "BRANCH",
+            "default_value": "main",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Git Username",
+            "description": "Git username for authentication",
+            "env_variable": "USERNAME",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Git Access Token",
+            "description": "Git access token for authentication (personal access token)",
+            "env_variable": "ACCESS_TOKEN",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Use Git?",
+            "description": "Use git features?",
+            "env_variable": "USING_GIT",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|boolean",
+            "field_type": "text"
+        },
+        {
+            "name": "Auto Update",
+            "description": "Pull the latest files on startup? Requires \"Using Git?\" to be enabled",
+            "env_variable": "AUTO_UPDATE",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|boolean",
+            "field_type": "text"
+        },
+        {
+            "name": "Start command",
+            "description": "Your start command",
+            "env_variable": "START_CMD",
+            "default_value": "bun index.ts",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Additional Bun Packages",
+            "description": "Install additional bun packages separated with a space",
+            "env_variable": "BUN_PACKAGES",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Uninstall Bun Packages",
+            "description": "Uninstall bun packages separated with a space",
+            "env_variable": "RMBUN_PACKAGES",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Extra OS Packages",
+            "description": "\u26a0\ufe0f(Requires server reinstall): Extra packages to be installed alongside the system separated with a space.",
+            "env_variable": "OS_PACKAGES",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Install Deps",
+            "description": "Install deps on start?",
+            "env_variable": "INSTALL_DEPS",
+            "default_value": "0",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|boolean",
+            "field_type": "text"
+        },
+        {
+            "name": "Install Dep Command",
+            "description": "The command to be ran when installing deps",
+            "env_variable": "INSTALL_DEPS_CMD",
+            "default_value": "bun install --production",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        }
+    ]
+}
